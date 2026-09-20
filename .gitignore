@@ -3,3 +3,7 @@
 
 # Private folders
 data
+
+# Python Junk
+**/__pycache__
+.pytest_cache
