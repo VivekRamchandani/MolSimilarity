@@ -4,8 +4,8 @@ import networkx as nx
 class CreateGraph:
     """Networkx Graph creator class"""
 
-    def __init__(self):
-        pass
+    def __init__(self, addHs: bool = False):
+        self.addHs = addHs
 
     def _molToGraph(self, mol: Chem.rdchem.Mol) -> nx.classes.graph.Graph:
         """Create graph from 2d structure of molecule
@@ -48,5 +48,14 @@ class CreateGraph:
         # Validate smiles
         if not mol:
             raise Exception("Error Invalid SMILES")
+        if self.addHs:
+            mol = Chem.AddHs(mol)
 
         return self._molToGraph(mol)
+
+
+class CreateProximityGraph:
+    """Networkx Graph creator class based on proximity"""
+
+    def __init__(self, addHs: bool = False):
+        self.addHs = addHs
