@@ -1,61 +1,91 @@
 from rdkit import Chem
 import networkx as nx
+from collections.abc import Callable
+from typing import Concatenate
+from functools import partial
 
-class CreateGraph:
-    """Networkx Graph creator class"""
+def _createGraph(mol: Chem.rdchem.Mol) -> nx.Graph:
+    """Create graph from 2d structure of molecule
 
-    def __init__(self, addHs: bool = False):
-        self.addHs = addHs
+    Args:
+        mol (Chem.rdchem.Mol): molecule to create graph of
 
-    def _molToGraph(self, mol: Chem.rdchem.Mol) -> nx.classes.graph.Graph:
-        """Create graph from 2d structure of molecule
+    Returns:
+        graph (networkx.Graph): returns graph created using networkx
+    """
+
+    graph = nx.Graph()
+    graph.add_nodes_from([i for i in range(0, mol.GetNumAtoms())])
+
+    for atom in mol.GetAtoms():
+        atom_id = atom.GetIdx()
+        neighbors = []
+        # Getting neighbor atoms
+        for neighbor in atom.GetNeighbors():
+            neighbor_id = neighbor.GetIdx()
+            # Making sure to not add duplicate edges.
+            if neighbor_id > atom_id:
+                neighbors.append((atom_id, neighbor_id))
+        if neighbors:
+            graph.add_edges_from(neighbors)
+
+    return graph
+
+def _createProximityGraph(self, mol: Chem.rdchem.Mol, distance: float) -> nx.Graph:
+    pass
+
+class GraphCreator():
+
+    def __init__(self, creator_func: Callable[Concatenate[Chem.rdchem.Mol, ...], nx.Graph], **extra_args: dict[str, any]):
+        """Graph Creator Factory
 
         Args:
-            mol (Chem.rdchem.Mol): molecule to create graph of
-
-        Returns:
-            graph (networkx.classes.graph.Graph): returns graph created using networkx
+            creator_func (Callable): Function that creates the graph using rdkit's `Mol` object.
+            **extra_args (dict): extra arguments to be passed when calling creator_func with `Mol` object.
         """
+        if not extra_args:
+            self.creator = creator_func
+        else:
+            self.creator: Callable[[Chem.rdchem.Mol], nx.Graph] = partial(creator_func, **creator_func)
 
-        graph = nx.Graph()
-        graph.add_nodes_from([i for i in range(0, mol.GetNumAtoms())])
+        # Options
+        self.add_Hs = False
 
-        for atom in mol.GetAtoms():
-            atom_id = atom.GetIdx()
-            neighbors = []
-            # Getting neighbor atoms
-            for neighbor in atom.GetNeighbors():
-                neighbor_id = neighbor.GetIdx()
-                # Making sure to not add duplicate edges.
-                if neighbor_id > atom_id:
-                    neighbors.append((atom_id, neighbor_id))
-            if neighbors:
-                graph.add_edges_from(neighbors)
+    def add_hydrogen(self):
+        self.add_Hs = True
+        return self
 
-        return graph
+    def usingMolecule(self, mol: Chem.rdchem.Mol):
+        if not isinstance(mol, Chem.rdchem.Mol):
+            raise TypeError("`mol` not of type `Chem.rdchem.Mol`")
 
-    def fromSmiles(self, smiles: str) -> nx.classes.graph.Graph:
+        if self.add_Hs:
+            mol = Chem.AddHs(mol)
+
+        return self.creator(mol)
+        
+    def fromSmiles(self, smiles: str) -> Chem.rdchem.Mol:
         """Create molecule graph from smiles
 
         Args:
             smiles (str): SMILES string of molecule
 
         Returns:
-            graph (networkx.classes.graph.Graph): returns 2D strucutre of molecule as graph
+            mol (Chem.rdchem.Mol): returns rdkit representation of Molecule
         """
 
         mol = Chem.MolFromSmiles(smiles)
         # Validate smiles
         if not mol:
             raise Exception("Error Invalid SMILES")
-        if self.addHs:
+
+        if self.add_Hs:
             mol = Chem.AddHs(mol)
 
-        return self._molToGraph(mol)
+        return self.creator(mol)
 
+def create_graph():
+    return GraphCreator(_createGraph)
 
-class CreateProximityGraph:
-    """Networkx Graph creator class based on proximity"""
-
-    def __init__(self, addHs: bool = False):
-        self.addHs = addHs
+def create_proximity_graph(distance: float):
+    return GraphCreator(_createProximityGraph, distance=distance)

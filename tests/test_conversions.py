@@ -1,5 +1,5 @@
 import pytest
-from utils.conversions import CreateGraph
+from utils.conversions import create_graph
 import networkx as nx
 
 def test_smiles_to_graph():
@@ -13,10 +13,10 @@ def test_smiles_to_graph():
         (9, 11), (11, 12)
     ])
 
-    graph = CreateGraph().fromSmiles(smiles)
+    graph = create_graph().fromSmiles(smiles)
     assert nx.utils.graphs_equal(graph, g)
 
 def test_smiles_to_graph_execption():
     invalid_smiles = "N1CC=CC=CC=2CCC(Br)C1=O"
     with pytest.raises(Exception):
-        CreateGraph.fromSmiles(invalid_smiles)
+        create_graph().fromSmiles(invalid_smiles)
