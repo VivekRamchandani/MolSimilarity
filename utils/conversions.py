@@ -33,12 +33,12 @@ def _createGraph(mol: Chem.rdchem.Mol) -> nx.Graph:
 
     return graph
 
-def _createProximityGraph(self, mol: Chem.rdchem.Mol, distance: float) -> nx.Graph:
+def _createProximityGraph(mol: Chem.rdchem.Mol, distance: float) -> nx.Graph:
     
     graph = nx.Graph()
     graph.add_nodes_from([i for i in range(0, mol.GetNumAtoms())])
 
-    conf_id = AllChem.EditableMol(mol)
+    conf_id = AllChem.EmbedMolecule(mol)
     if conf_id == -1:
         raise Exception("Failed to generate conformer")
 
@@ -51,10 +51,11 @@ def _createProximityGraph(self, mol: Chem.rdchem.Mol, distance: float) -> nx.Gra
             other_atom_idx = idx + atom_idx + 1
             dis = linalg.norm(atom_pos - other_pos)
             if dis <= distance:
-                print(other_atom_idx, dis)
                 neighbors.append((atom_idx, other_atom_idx))
         if neighbors:
             graph.add_edges_from(neighbors)
+
+    return graph
 
 class GraphCreator():
 
@@ -66,7 +67,7 @@ class GraphCreator():
             **extra_args (dict): extra arguments to be passed when calling creator_func with `Mol` object.
         """
         if extra_args:
-            self.creator: Callable[[Chem.rdchem.Mol], nx.Graph] = partial(creator_func, **creator_func)
+            self.creator: Callable[[Chem.rdchem.Mol], nx.Graph] = partial(creator_func, **extra_args)
         else:
             self.creator = creator_func
         
