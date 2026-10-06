@@ -98,8 +98,16 @@ class GraphCreator():
 
         return self.creator(mol)
 
-def create_graph():
+def create_graph() -> GraphCreator:
+    """Returns a `GraphCreator` object that creates graph of molecule structure.
+    """
     return GraphCreator(_createGraph)
 
-def create_proximity_graph(distance: float):
+def create_proximity_graph(distance: float) -> GraphCreator:
+    """Return a `GraphCreator` object to make proximity graph of molecute structure
+    
+    Args:
+        distance (float): controls the distance to determine whether two atoms are in each other's proximity. 
+    """
+
     return GraphCreator(_createProximityGraph, distance=distance)
