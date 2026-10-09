@@ -71,15 +71,20 @@ class GraphCreator():
         else:
             self.creator = creator_func
         
-    def usingMolecule(self, mol: Chem.rdchem.Mol):
+    def createuUsingMolecule(self, mol: Chem.rdchem.Mol):
         if not isinstance(mol, Chem.rdchem.Mol):
             raise TypeError("`mol` not of type `Chem.rdchem.Mol`")
 
         mol = Chem.AddHs(mol)
 
-        return self.creator(mol)
+        graph = self.creator(mol)
+
+        num_rings = mol.GetRingInfo().NumRings()
+        graph.graph["rings"] = num_rings
+
+        return graph
         
-    def fromSmiles(self, smiles: str) -> Chem.rdchem.Mol:
+    def createFromSmiles(self, smiles: str) -> Chem.rdchem.Mol:
         """Create molecule graph from smiles
 
         Args:
@@ -96,14 +101,19 @@ class GraphCreator():
 
         mol = Chem.AddHs(mol)
 
-        return self.creator(mol)
+        graph = self.creator(mol)
 
-def create_graph() -> GraphCreator:
+        num_rings = mol.GetRingInfo().NumRings()
+        graph.graph["rings"] = num_rings
+
+        return graph
+
+def graph_creator() -> GraphCreator:
     """Returns a `GraphCreator` object that creates graph of molecule structure.
     """
     return GraphCreator(_createGraph)
 
-def create_proximity_graph(distance: float) -> GraphCreator:
+def proximity_graph_creator(distance: float) -> GraphCreator:
     """Return a `GraphCreator` object to make proximity graph of molecute structure
     
     Args:
