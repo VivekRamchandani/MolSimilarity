@@ -51,4 +51,11 @@ array([ 0.16874041,  0.20101536,  0.10900161,  0.12516901,  0.19068376,
         0.02074679,  0.        , -0.02003913,  0.        ,  0.        ])
 ```
 
-embeddings can be normalized to make finding similarity easier.
+embeddings can be normalized for faster similarity computation.
+
+---
+
+TODOs:
+
+1. Weisfeiler-Leman algorithm to encode node-level (atom-level) features in graph embedding
+2. Add methods to convert different molecule structure formats to graphs
