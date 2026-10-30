@@ -1,14 +1,29 @@
 import argparse
 from pathlib import Path
-
+from . import utils
+import sqlite3
 
 def handle_createdb(args: argparse.Namespace) -> None:
     """Handler for 'createdb' subcommand."""
     db_path: Path = args.dbPath
     data_file: Path = args.file
 
-    # TODO: db create logic
+    if db_path.exists():
+        raise FileExistsError("Folder already exists.")
 
+    db_path.mkdir()
+
+    suffix = data_file.suffix
+
+    match suffix:
+        case ".smi" | ".smiles":
+            df = utils.load_smi(str(data_file))
+        case _:
+            db_path.rmdir()
+            raise Exception(f"File format {suffix} not supported !!!!!")
+
+    conn = sqlite3.connect(db_path / "metadata.db")
+    df.to_sql(name="metadata", con=conn)
 
 def handle_querydb(args: argparse.Namespace) -> None:
     """Handler for 'querydb' subcommand."""

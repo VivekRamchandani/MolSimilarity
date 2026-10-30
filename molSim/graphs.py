@@ -1,10 +1,16 @@
 from rdkit import Chem
 from rdkit.Chem import AllChem
+
 import networkx as nx
+
+import pyfglt.fglt as fg
+
 from collections.abc import Callable
 from typing import Concatenate
 from functools import partial
-from numpy import linalg
+
+import numpy as np
+
 
 def _createGraph(mol: Chem.rdchem.Mol) -> nx.Graph:
     """Create graph from 2d structure of molecule
@@ -34,6 +40,15 @@ def _createGraph(mol: Chem.rdchem.Mol) -> nx.Graph:
     return graph
 
 def _createProximityGraph(mol: Chem.rdchem.Mol, distance: float) -> nx.Graph:
+    """Create proximity graph from 3d structure of molecule
+
+    Args:
+        mol (Chem.rdchem.Mol): molecule to create graph of
+        distance (float): controls the distance to determine whether two atoms are in each other's proximity.
+
+    Returns:
+        graph (networkx.Graph): returns graph created using networkx
+    """
     
     graph = nx.Graph()
     graph.add_nodes_from([i for i in range(0, mol.GetNumAtoms())])
@@ -49,7 +64,7 @@ def _createProximityGraph(mol: Chem.rdchem.Mol, distance: float) -> nx.Graph:
         neighbors = []
         for idx, other_pos in enumerate(positions[atom_idx+1:]):
             other_atom_idx = idx + atom_idx + 1
-            dis = linalg.norm(atom_pos - other_pos)
+            dis = np.linalg.norm(atom_pos - other_pos)
             if dis <= distance:
                 neighbors.append((atom_idx, other_atom_idx))
         if neighbors:
@@ -121,3 +136,28 @@ def proximity_graph_creator(distance: float) -> GraphCreator:
     """
 
     return GraphCreator(_createProximityGraph, distance=distance)
+
+
+def embed_graph(graph: nx.Graph, normalize: bool = False) -> np.ndarray:
+    """Embeds a graph
+
+    Args:
+        graph (networkx.Graph): graph to embed
+        normalize (bool): normalize embeddings (default=False)
+    
+    Returns:
+        embedding (np.ndarray): embeddings for the garph.
+    """
+
+    # Computing Graphlet Correlation Matrix from Graphlet Degree Vector
+    gdv = fg.compute(graph)
+    gcm_df = fg.compute_graphlet_correlation_matrix(gdv).fillna(0.0)
+    # Converting dataframe to numpy array
+    # and flattening 
+    gcm = gcm_df.to_numpy()
+    vec = np.r_[ *[gcm[i][i+1:] for i in range(0, 14)] ]
+
+    if normalize:
+        vec = vec / np.linalg.norm(vec)
+
+    return vec
