@@ -11,6 +11,9 @@ def handle_createdb(args: argparse.Namespace) -> None:
     if db_path.exists():
         raise FileExistsError("Folder already exists.")
 
+    if not data_file.exists():
+        raise FileNotFoundError("File not found !!")
+
     db_path.mkdir()
 
     suffix = data_file.suffix
@@ -18,6 +21,10 @@ def handle_createdb(args: argparse.Namespace) -> None:
     match suffix:
         case ".smi" | ".smiles":
             df = utils.load_smi(str(data_file))
+            utils.faiss_index_from_smiles(df)
+        case ".sdf":
+            # TODO: process sdf and create faiss index
+            pass
         case _:
             db_path.rmdir()
             raise Exception(f"File format {suffix} not supported !!!!!")

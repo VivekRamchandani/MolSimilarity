@@ -99,23 +99,55 @@ class GraphCreator():
 
         return graph
         
-    def createFromSmiles(self, smiles: str) -> Chem.rdchem.Mol:
+    def createFromSmiles(self, smiles: str) -> nx.Graph:
         """Create molecule graph from smiles
 
         Args:
             smiles (str): SMILES string of molecule
 
         Returns:
-            mol (Chem.rdchem.Mol): returns rdkit representation of Molecule
+            graph (nx.Graph): returns molecule structure as networkx.Graph
         """
 
         mol = Chem.MolFromSmiles(smiles)
         # Validate smiles
         if not mol:
-            raise Exception("Error Invalid SMILES")
+            return None
+            # Not raising errors !!
+            # raise Exception("Error Invalid SMILES")
 
         mol = Chem.AddHs(mol)
 
+        graph = self.creator(mol)
+
+        num_rings = mol.GetRingInfo().NumRings()
+        graph.graph["rings"] = num_rings
+
+        return graph
+
+    def createFromSDF(self, supplier: Chem.SDMolSupplier) -> nx.Graph:
+        """Create molecule graph from smiles
+
+        Args:
+            supplier (Chem.SDMolSupplier): rdkit's SDF Mol supplier to read molecule from sdf
+
+        Returns:
+            graph (nx.Graph): returns molecule structure as networkx.Graph
+        """
+
+        if supplier.atEnd():
+            return None
+            # Not raising errors !!
+            # raise Exception("No more molecules to read !!")
+
+        mol = next(supplier)
+
+        if not mol:
+            return None
+            # raise Exception("Parsing error")
+
+        mol = Chem.AddHs(mol)
+        
         graph = self.creator(mol)
 
         num_rings = mol.GetRingInfo().NumRings()
@@ -146,7 +178,7 @@ def embed_graph(graph: nx.Graph, normalize: bool = False) -> np.ndarray:
         normalize (bool): normalize embeddings (default=False)
     
     Returns:
-        embedding (np.ndarray): embeddings for the garph.
+        embedding (np.ndarray): 1D embeddings for the garph.
     """
 
     # Computing Graphlet Correlation Matrix from Graphlet Degree Vector
@@ -155,9 +187,36 @@ def embed_graph(graph: nx.Graph, normalize: bool = False) -> np.ndarray:
     # Converting dataframe to numpy array
     # and flattening 
     gcm = gcm_df.to_numpy()
-    vec = np.r_[ *[gcm[i][i+1:] for i in range(0, 14)] ]
+    embedding = np.r_[ *[gcm[i][i+1:] for i in range(0, 14)] ]
 
     if normalize:
-        vec = vec / np.linalg.norm(vec)
+        embedding = embedding / np.linalg.norm(embedding)
 
-    return vec
+    return embedding
+
+def embed_graphs(graphs: list[nx.Graph], normalize: bool = False) -> np.ndarray:
+    """Embed Graphs
+
+    Args:
+        graphs (list[nx.Graph]): list of networkx graph objects
+        normalize (bool): normalize embeddings (default=False)
+    
+    Returns:
+        embeddings (np.ndarray): return embeddings for all graphs in numpy ndarray
+    """
+
+    embeddings = np.empty((len(graph), 105), dtype=np.float32)
+    for i, graph in enumerate(graphs):
+        gdv = fg.compute(graph)
+        gcm_df = fg.compute_graphlet_correlation_matrix(gdv).fillna(0.0)
+        # Converting dataframe to numpy array
+        # and flattening 
+        gcm = gcm_df.to_numpy()
+        embedding = np.r_[ *[gcm[i][i+1:] for i in range(0, 14)] ]
+    
+        if normalize:
+            embedding = embedding / np.linalg.norm(embedding)
+
+        embeddings[i] = embedding
+
+    return embeddings
